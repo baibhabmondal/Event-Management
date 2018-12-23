@@ -1,0 +1,6 @@
+{
+  "env": {
+    "mongoUser": "baibhab",
+    "mongoPassword": "pass123"
+  }
+}
