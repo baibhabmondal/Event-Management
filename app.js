@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const graphqlhttp = require('express-graphql');
 const { buildSchema } = require('graphql');
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 const Event = require('./models/event');
 const User = require('./models/user');
 const app = express();
@@ -81,8 +82,10 @@ app.use('/graphql', graphqlhttp({
         users: () => {
             return User.find()
                 .exec()
-                .then(user => {
-                    return {...user._doc, _uid: user._doc._uid.toString() }
+                .then(data => {
+                    return data.map(user => {
+                        return { ...user._doc, _id: user._doc._id.toString()}
+                    })
                 })
                 .catch(err => {
                     console.log(err)
@@ -106,19 +109,24 @@ app.use('/graphql', graphqlhttp({
             });
         },
         createUser: (args) => {
-            const user = new User({
-                email: args.userInput.email,
-                password: args.userInput.password
+            return bcrypt.hash(args.userInput.password, 12)
+            .then(hashedPassword => {
+                const user = new User({
+                    email: args.userInput.email,
+                    password: hashedPassword
+                })
+                return user.save()
+                    .then(data => {
+                        return { ...data._doc, _uid: data._doc._id.toString() }
+                    })
+                    .catch(err => {
+                        console.log(err);
+                        throw err;
+                    })
             })
-            return user.save()
-            .then(data => {
-                return {...data._doc, _uid: data._doc._uid.toString()}
+            .catch(err => {
+                console.log(err)
             })
-            .catch(err =>{
-                console.log(err);
-                throw err;
-            })
-
         }
     },
     graphiql: true
