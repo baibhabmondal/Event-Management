@@ -5,6 +5,7 @@ const graphqlhttp = require('express-graphql');
 const { buildSchema } = require('graphql');
 const mongoose = require('mongoose');
 const Event = require('./models/event');
+const User = require('./models/user');
 const app = express();
 
 mongoose.connect(`mongodb://${cred.user}:${cred.pass}@ds243054.mlab.com:43054/eventgraphql`, {
@@ -26,6 +27,14 @@ app.use('/graphql', graphqlhttp({
             description: String!
             price: Float!
             date: String!
+            creator: User!
+        }
+
+        type User {
+            _uid: ID!
+            email: String!
+            password: String
+            createdEvent: [Event]!
         }
 
         input EventInput {
@@ -35,12 +44,19 @@ app.use('/graphql', graphqlhttp({
             date: String!
         }
 
+        input UserInput {
+            email: String!
+            password: String!
+        }
+
         type rootQuery {
             events: [Event!]!
+            users: [User!]!
         }
 
         type rootMutation {
             createEvents(eventInput: EventInput): Event
+            createUser(userInput: UserInput): User
         }
 
         schema {
@@ -62,6 +78,17 @@ app.use('/graphql', graphqlhttp({
                 throw err;
             })
         },
+        users: () => {
+            return User.find()
+                .exec()
+                .then(user => {
+                    return {...user._doc, _uid: user._doc._uid.toString() }
+                })
+                .catch(err => {
+                    console.log(err)
+                    throw err;
+                })
+        },
         createEvents: (args) => {
             const event = new Event({
                 title: args.eventInput.title,
@@ -77,6 +104,21 @@ app.use('/graphql', graphqlhttp({
                 console.log(err)
                 throw err
             });
+        },
+        createUser: (args) => {
+            const user = new User({
+                email: args.userInput.email,
+                password: args.userInput.password
+            })
+            return user.save()
+            .then(data => {
+                return {...data._doc, _uid: data._doc._uid.toString()}
+            })
+            .catch(err =>{
+                console.log(err);
+                throw err;
+            })
+
         }
     },
     graphiql: true
