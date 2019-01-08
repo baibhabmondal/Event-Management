@@ -28,7 +28,7 @@ app.use('/graphql', graphqlhttp({
             description: String!
             price: Float!
             date: String!
-            creator: User!
+            creator: ID!
         }
 
         type User {
@@ -97,13 +97,29 @@ app.use('/graphql', graphqlhttp({
                 title: args.eventInput.title,
                 description: args.eventInput.description,
                 price: +args.eventInput.price,
-                date: new Date(args.eventInput.date)
+                date: new Date(args.eventInput.date),
+                creator: "5c2bad5446bff72b2805969b"
             })
+            let CreatedEvent
             return event.save()
             .then(data => {
+                CreatedEvent =  {...data._doc, creator: data._doc.creator.toString()  , _id: data._doc._id.toString()}
+                return User.findById("5c2bad5446bff72b2805969b")
                 console.log(data)
-                return {...data._doc, _id: data._doc._id.toString()}
-            }).catch(err => {
+            })
+            .then(user => {
+                if(!user)
+                {
+                    console.log("No user of that ID")
+                }
+                user.createdEvents.push(event)
+                return user.save()
+            })
+            .then(dataUser => {
+                console.log(CreatedEvent)
+                return CreatedEvent
+            })
+            .catch(err => {
                 console.log(err)
                 throw err
             });
