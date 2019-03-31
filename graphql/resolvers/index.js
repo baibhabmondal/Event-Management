@@ -10,7 +10,14 @@ module.exports = {
             .exec()
             .then(data => {
                 return data.map(event => {
-                    return { ...event._doc, _id: event._doc._id.toString(), creator: { ...event._doc.creator._doc, _uid: event._doc.creator._id.toString() } }
+                    return { ...event._doc,
+                        date: event._doc.date.toLocaleString('en-US', {timezone: 'IST'}),
+                        _id: event._doc._id.toString(),
+                        creator: {
+                            ...event._doc.creator._doc,
+                            _uid: event._doc.creator._id.toString()
+                        }
+                    }
                 })
             }).catch(err => {
                 console.log(err)
@@ -33,36 +40,26 @@ module.exports = {
                 throw err;
             })
     },
-    createEvents: (args) => {
+    createEvents: async (args) => {
         const event = new Event({
             title: args.eventInput.title,
             description: args.eventInput.description,
             price: +args.eventInput.price,
             date: new Date(args.eventInput.date),
-            creator: { _uid: "5c2bad5446bff72b2805969b" }
+            creator: args.eventInput.creator
         })
         let CreatedEvent
-        return event.save()
-            .then(data => {
-                CreatedEvent = { ...data._doc, creator: data._doc.creator.toString(), _id: data._doc._id.toString() }
-                return User.findById("5c2bad5446bff72b2805969b")
-                console.log(data)
-            })
-            .then(user => {
-                if (!user) {
-                    console.log("No user of that ID")
+        try {
+        const data = await event.save();
+        const maker = await User.findById(data._doc.creator)
+        CreatedEvent = { ...data._doc,
+                    creator: {...maker._doc, _uid: maker._doc._id.toString()},
+                    _id: data._doc._id.toString()
                 }
-                user.createdEvents.push(event)
-                return user.save()
-            })
-            .then(dataUser => {
-                console.log(CreatedEvent)
-                return CreatedEvent
-            })
-            .catch(err => {
-                console.log(err)
-                throw err
-            });
+        return CreatedEvent
+        } catch (e) {
+            console.log(e)
+        }
     },
     createUser: (args) => {
         return bcrypt.hash(args.userInput.password, 12)
